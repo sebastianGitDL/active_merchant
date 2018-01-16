@@ -560,21 +560,23 @@ module ActiveMerchant
       def add_billing_address(xml, payment_source, options)
         address = options[:billing_address] || options[:address] || {}
 
-        xml.billTo do
-          first_name, last_name = names_from(payment_source, address, options)
-          state = state_from(address, options)
-          full_address = "#{address[:address1]} #{address[:address2]}".strip
+        unless payment_source.nil?
+          xml.billTo do
+            first_name, last_name = names_from(payment_source, address, options)
+            state = state_from(address, options)
+            full_address = "#{address[:address1]} #{address[:address2]}".strip
 
-          xml.firstName(truncate(first_name, 50)) unless empty?(first_name)
-          xml.lastName(truncate(last_name, 50)) unless empty?(last_name)
-          xml.company(truncate(address[:company], 50)) unless empty?(address[:company])
-          xml.address(truncate(full_address, 60))
-          xml.city(truncate(address[:city], 40))
-          xml.state(truncate(state, 40))
-          xml.zip(truncate((address[:zip] || options[:zip]), 20))
-          xml.country(truncate(address[:country], 60))
-          xml.phoneNumber(truncate(address[:phone], 25)) unless empty?(address[:phone])
-          xml.faxNumber(truncate(address[:fax], 25)) unless empty?(address[:fax])
+            xml.firstName(truncate(first_name, 50)) unless empty?(first_name)
+            xml.lastName(truncate(last_name, 50)) unless empty?(last_name)
+            xml.company(truncate(address[:company], 50)) unless empty?(address[:company])
+            xml.address(truncate(full_address, 60))
+            xml.city(truncate(address[:city], 40))
+            xml.state(truncate(state, 40))
+            xml.zip(truncate((address[:zip] || options[:zip]), 20))
+            xml.country(truncate(address[:country], 60))
+            xml.phoneNumber(truncate(address[:phone], 25)) unless empty?(address[:phone])
+            xml.faxNumber(truncate(address[:fax], 25)) unless empty?(address[:fax])
+          end
         end
       end
 

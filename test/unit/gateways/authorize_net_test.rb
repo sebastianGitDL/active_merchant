@@ -756,9 +756,12 @@ class AuthorizeNetTest < Test::Unit::TestCase
   end
 
   def test_successful_refund
-    @gateway.expects(:ssl_post).returns(successful_refund_response)
+    refund = stub_comms do
+      @gateway.refund(36.40, '2214269051#XXXX1234')
+    end.check_request do |endpoint, data, headers|
+      assert_no_match /billTo/, data
+    end.respond_with(successful_refund_response)
 
-    assert refund = @gateway.refund(36.40, '2214269051#XXXX1234')
     assert_success refund
     assert_equal 'This transaction has been approved', refund.message
     assert_equal '2214602071#2224#refund', refund.authorization
@@ -769,9 +772,6 @@ class AuthorizeNetTest < Test::Unit::TestCase
       @gateway.refund(50, '123456789', card_number: @credit_card.number, first_name: "Bob", last_name: "Smith", zip: "12345", order_id: "1", description: "Refund for order 1")
     end.check_request do |endpoint, data, headers|
       parse(data) do |doc|
-        assert_equal "Bob", doc.at_xpath("//billTo/firstName").content, data
-        assert_equal "Smith", doc.at_xpath("//billTo/lastName").content, data
-        assert_equal "12345", doc.at_xpath("//billTo/zip").content, data
         assert_equal "0.50", doc.at_xpath("//transactionRequest/amount").content
         assert_equal "1", doc.at_xpath("//transactionRequest/order/invoiceNumber").content
         assert_equal "Refund for order 1", doc.at_xpath("//transactionRequest/order/description").content
