@@ -38,6 +38,7 @@ module ActiveMerchant
         add_address(params, options)
         add_amount(params, amount, options)
         add_soft_descriptors(params, options)
+        add_level2_information(params, options)
 
         commit(params, options)
       end
@@ -237,6 +238,13 @@ module ActiveMerchant
 
       def add_soft_descriptors(params, options)
         params[:soft_descriptors] = options[:soft_descriptors] if options[:soft_descriptors]
+      end
+      
+      def add_level2_information(params, options)
+        level2                  = {}
+        level2[:tax1_amount]    = options[:level2][:tax1_amount]
+        level2[:customer_ref]   = options[:order_id]
+        params[:level2]         = level2
       end
 
       def commit(params, options)
