@@ -241,10 +241,12 @@ module ActiveMerchant
       end
       
       def add_level2_information(params, options)
-        level2                  = {}
-        level2[:tax1_amount]    = options[:level2][:tax1_amount]
-        level2[:customer_ref]   = options[:order_id]
-        params[:level2]         = level2
+        if options[:level2]
+          level2                  = {}
+          level2[:tax1_amount]    = options[:level2][:tax1_amount]
+          level2[:customer_ref]   = options[:order_id]
+          params[:level2]         = level2
+        end
       end
 
       def commit(params, options)
