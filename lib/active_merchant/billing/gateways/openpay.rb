@@ -38,6 +38,7 @@ module ActiveMerchant #:nodoc:
       def capture(money, authorization, options = {})
         post = {}
         post[:amount] = amount(money) if money
+        post[:payments] = options[:payments] if options[:payments]
         commit(:post, "charges/#{CGI.escape(authorization)}/capture", post, options)
       end
 
@@ -114,6 +115,7 @@ module ActiveMerchant #:nodoc:
         post[:device_session_id] = options[:device_session_id]
         post[:currency] = (options[:currency] || currency(money)).upcase
         post[:use_card_points] = options[:use_card_points] if options[:use_card_points]
+        post[:payment_plan] = {payments: options[:payments]} if options[:payments]
         add_creditcard(post, creditcard, options)
         post
       end
@@ -163,10 +165,10 @@ module ActiveMerchant #:nodoc:
 
       def headers(options = {})
         {
-          "Content-Type" => "application/json",
-          "Authorization" => "Basic " + Base64.strict_encode64(@api_key.to_s + ":").strip,
-          "User-Agent" => "Openpay/v1 ActiveMerchantBindings/#{ActiveMerchant::VERSION}",
-          "X-Openpay-Client-User-Agent" => user_agent
+          'Content-Type' => 'application/json',
+          'Authorization' => 'Basic ' + Base64.strict_encode64(@api_key.to_s + ':').strip,
+          'User-Agent' => "Openpay/v1 ActiveMerchantBindings/#{ActiveMerchant::VERSION}",
+          'X-Openpay-Client-User-Agent' => user_agent
         }
       end
 

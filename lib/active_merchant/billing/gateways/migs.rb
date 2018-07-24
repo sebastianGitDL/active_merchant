@@ -1,7 +1,5 @@
 require 'active_merchant/billing/gateways/migs/migs_codes'
 
-require 'openssl' # Used in add_secure_hash
-
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class MigsGateway < Gateway
@@ -196,7 +194,7 @@ module ActiveMerchant #:nodoc:
 
         expected_secure_hash = calculate_secure_hash(response_hash, @options[:secure_hash])
         unless response_hash[:SecureHash] == expected_secure_hash
-          raise SecurityError, "Secure Hash mismatch, response may be tampered with"
+          raise SecurityError, 'Secure Hash mismatch, response may be tampered with'
         end
 
         response_object(response_hash)
@@ -204,6 +202,20 @@ module ActiveMerchant #:nodoc:
 
       def test?
         @options[:login].start_with?('TEST')
+      end
+
+      def supports_scrubbing?
+        true
+      end
+
+      def scrub(transcript)
+        transcript.
+          gsub(%r((&?CardNum=)\d*(&?)), '\1[FILTERED]\2').
+          gsub(%r((&?CardSecurityCode=)\d*(&?)), '\1[FILTERED]\2').
+          gsub(%r((&?AccessCode=)[^&]*(&?)), '\1[FILTERED]\2').
+          gsub(%r((&?Password=)[^&]*(&?)), '\1[FILTERED]\2').
+          gsub(%r((&?3DSXID=)[^&]*(&?)), '\1[FILTERED]\2').
+          gsub(%r((&?VerToken=)[^&]*(&?)), '\1[FILTERED]\2')
       end
 
       private
@@ -225,10 +237,10 @@ module ActiveMerchant #:nodoc:
       def add_3ds(post, options)
         post[:VerType] = options[:ver_type] if options[:ver_type]
         post[:VerToken] = options[:ver_token] if options[:ver_token]
-        post["3DSXID"] = options[:three_ds_xid] if options[:three_ds_xid]
-        post["3DSECI"] = options[:three_ds_eci] if options[:three_ds_eci]
-        post["3DSenrolled"] = options[:three_ds_enrolled] if options[:three_ds_enrolled]
-        post["3DSstatus"] = options[:three_ds_status] if options[:three_ds_status]
+        post['3DSXID'] = options[:three_ds_xid] if options[:three_ds_xid]
+        post['3DSECI'] = options[:three_ds_eci] if options[:three_ds_eci]
+        post['3DSenrolled'] = options[:three_ds_enrolled] if options[:three_ds_enrolled]
+        post['3DSstatus'] = options[:three_ds_status] if options[:three_ds_status]
       end
 
       def add_creditcard(post, creditcard)
@@ -260,10 +272,10 @@ module ActiveMerchant #:nodoc:
 
       def response_object(response)
         avs_response_code = response[:AVSResultCode]
-        avs_response_code = 'S' if avs_response_code == "Unsupported"
+        avs_response_code = 'S' if avs_response_code == 'Unsupported'
 
         cvv_result_code = response[:CSCResultCode]
-        cvv_result_code = 'P' if cvv_result_code == "Unsupported"
+        cvv_result_code = 'P' if cvv_result_code == 'Unsupported'
 
         Response.new(success?(response), response[:Message], response,
           :test => test?,
@@ -293,7 +305,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def post_data(post)
-        post.collect { |key, value| "vpc_#{key}=#{CGI.escape(value.to_s)}" }.join("&")
+        post.collect { |key, value| "vpc_#{key}=#{CGI.escape(value.to_s)}" }.join('&')
       end
 
       def add_secure_hash(post)

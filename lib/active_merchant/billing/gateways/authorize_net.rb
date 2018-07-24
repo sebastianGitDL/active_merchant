@@ -89,10 +89,10 @@ module ActiveMerchant
           2 => /\A;(?<pan>[\d]{1,19}+)=(?<expiration>[\d]{0,4}|=)(?<service_code>[\d]{0,3}|=)(?<discretionary_data>.*)\?\Z/
       }.freeze
 
-      APPLE_PAY_DATA_DESCRIPTOR = "COMMON.APPLE.INAPP.PAYMENT"
+      APPLE_PAY_DATA_DESCRIPTOR = 'COMMON.APPLE.INAPP.PAYMENT'
 
-      PAYMENT_METHOD_NOT_SUPPORTED_ERROR = "155"
-      INELIGIBLE_FOR_ISSUING_CREDIT_ERROR = "54"
+      PAYMENT_METHOD_NOT_SUPPORTED_ERROR = '155'
+      INELIGIBLE_FOR_ISSUING_CREDIT_ERROR = '54'
 
       def initialize(options={})
         requires!(options, :login, :password)
@@ -102,11 +102,11 @@ module ActiveMerchant
       def purchase(amount, payment, options = {})
         if payment.is_a?(String)
           commit(:cim_purchase) do |xml|
-            add_cim_auth_purchase(xml, "profileTransAuthCapture", amount, payment, options)
+            add_cim_auth_purchase(xml, 'profileTransAuthCapture', amount, payment, options)
           end
         else
           commit(:purchase) do |xml|
-            add_auth_purchase(xml, "authCaptureTransaction", amount, payment, options)
+            add_auth_purchase(xml, 'authCaptureTransaction', amount, payment, options)
           end
         end
       end
@@ -114,11 +114,11 @@ module ActiveMerchant
       def authorize(amount, payment, options={})
         if payment.is_a?(String)
           commit(:cim_authorize) do |xml|
-            add_cim_auth_purchase(xml, "profileTransAuthOnly", amount, payment, options)
+            add_cim_auth_purchase(xml, 'profileTransAuthOnly', amount, payment, options)
           end
         else
           commit(:authorize) do |xml|
-            add_auth_purchase(xml, "authOnlyTransaction", amount, payment, options)
+            add_auth_purchase(xml, 'authOnlyTransaction', amount, payment, options)
           end
         end
       end
@@ -141,7 +141,7 @@ module ActiveMerchant
         return response if response.success?
         return response unless options[:force_full_refund_if_unsettled]
 
-        if response.params["response_reason_code"] == INELIGIBLE_FOR_ISSUING_CREDIT_ERROR
+        if response.params['response_reason_code'] == INELIGIBLE_FOR_ISSUING_CREDIT_ERROR
           void(authorization, options)
         else
           response
@@ -158,7 +158,7 @@ module ActiveMerchant
 
       def credit(amount, payment, options={})
         if payment.is_a?(String)
-          raise ArgumentError, "Reference credits are not supported. Please supply the original credit card or use the #refund method."
+          raise ArgumentError, 'Reference credits are not supported. Please supply the original credit card or use the #refund method.'
         end
 
         commit(:credit) do |xml|
@@ -167,7 +167,7 @@ module ActiveMerchant
             xml.transactionType('refundTransaction')
             xml.amount(amount(amount))
 
-            add_payment_source(xml, payment)
+            add_payment_source(xml, payment, options, :credit)
             xml.refTransId(transaction_id_from(options[:transaction_id])) if options[:transaction_id]
             add_invoice(xml, 'refundTransaction', options)
             add_customer_data(xml, payment, options)
@@ -222,7 +222,7 @@ module ActiveMerchant
 
       def supports_network_tokenization?
         card = Billing::NetworkTokenizationCreditCard.new({
-          :number => "4111111111111111",
+          :number => '4111111111111111',
           :month => 12,
           :year => 20,
           :first_name => 'John',
@@ -232,7 +232,7 @@ module ActiveMerchant
         })
 
         request = post_data(:authorize) do |xml|
-          add_auth_purchase(xml, "authOnlyTransaction", 1, card, {})
+          add_auth_purchase(xml, 'authOnlyTransaction', 1, card, {})
         end
         raw_response = ssl_post(url, request, headers)
         response = parse(:authorize, raw_response)
@@ -246,7 +246,7 @@ module ActiveMerchant
         xml.transactionRequest do
           xml.transactionType(transaction_type)
           xml.amount(amount(amount))
-          add_payment_source(xml, payment)
+          add_payment_source(xml, payment, options)
           add_invoice(xml, transaction_type, options)
           add_tax_fields(xml, options)
           add_duty_fields(xml, options)
@@ -268,7 +268,7 @@ module ActiveMerchant
             add_tax_fields(xml, options)
             add_shipping_fields(xml, options)
             add_duty_fields(xml, options)
-            add_payment_source(xml, payment)
+            add_payment_source(xml, payment, options)
             add_invoice(xml, transaction_type, options)
             add_tax_exempt_status(xml, options)
           end
@@ -302,7 +302,7 @@ module ActiveMerchant
             add_tax_exempt_status(xml, options)
             add_po_number(xml, options)
             xml.refTransId(transaction_id_from(authorization))
-            add_invoice(xml, "capture", options)
+            add_invoice(xml, 'capture', options)
             add_user_fields(xml, amount, options)
           end
         end
@@ -320,7 +320,7 @@ module ActiveMerchant
               add_shipping_fields(xml, options)
               add_duty_fields(xml, options)
               xml.creditCardNumberMasked(card_number)
-              add_invoice(xml, "profileTransRefund", options)
+              add_invoice(xml, 'profileTransRefund', options)
               xml.transId(transaction_id)
             end
           end
@@ -375,16 +375,16 @@ module ActiveMerchant
         end
       end
 
-      def add_payment_source(xml, source)
+      def add_payment_source(xml, source, options, action = nil)
         return unless source
         if source.is_a?(String)
-          add_token_payment_method(xml, source)
+          add_token_payment_method(xml, source, options)
         elsif card_brand(source) == 'check'
           add_check(xml, source)
         elsif card_brand(source) == 'apple_pay'
           add_apple_pay_payment_token(xml, source)
         else
-          add_credit_card(xml, source)
+          add_credit_card(xml, source, action)
         end
       end
 
@@ -396,38 +396,38 @@ module ActiveMerchant
         xml.transactionSettings do
           if options[:recurring]
             xml.setting do
-              xml.settingName("recurringBilling")
-              xml.settingValue("true")
+              xml.settingName('recurringBilling')
+              xml.settingValue('true')
             end
           end
           if options[:disable_partial_auth]
             xml.setting do
-              xml.settingName("allowPartialAuth")
-              xml.settingValue("false")
+              xml.settingName('allowPartialAuth')
+              xml.settingValue('false')
             end
           end
           if options[:duplicate_window]
             set_duplicate_window(xml, options[:duplicate_window])
           elsif self.class.duplicate_window
-            ActiveMerchant.deprecated "Using the duplicate_window class_attribute is deprecated. Use the transaction options hash instead."
+            ActiveMerchant.deprecated 'Using the duplicate_window class_attribute is deprecated. Use the transaction options hash instead.'
             set_duplicate_window(xml, self.class.duplicate_window)
           end
-          if options[:email_customer]
+          if options.key?(:email_customer)
             xml.setting do
-              xml.settingName("emailCustomer")
-              xml.settingValue("true")
+              xml.settingName('emailCustomer')
+              xml.settingValue(options[:email_customer] ? 'true' : 'false')
             end
           end
           if options[:header_email_receipt]
             xml.setting do
-              xml.settingName("headerEmailReceipt")
+              xml.settingName('headerEmailReceipt')
               xml.settingValue(options[:header_email_receipt])
             end
           end
           if options[:test_request]
             xml.setting do
-              xml.settingName("testRequest")
-              xml.settingValue("1")
+              xml.settingName('testRequest')
+              xml.settingValue('1')
             end
           end
         end
@@ -435,7 +435,7 @@ module ActiveMerchant
 
       def set_duplicate_window(xml, value)
         xml.setting do
-          xml.settingName("duplicateWindow")
+          xml.settingName('duplicateWindow')
           xml.settingValue(value)
         end
       end
@@ -444,20 +444,20 @@ module ActiveMerchant
         xml.userFields do
           if currency = (options[:currency] || currency(amount))
             xml.userField do
-              xml.name("x_currency_code")
+              xml.name('x_currency_code')
               xml.value(currency)
             end
           end
           if application_id.present?
             xml.userField do
-              xml.name("x_solution_id")
+              xml.name('x_solution_id')
               xml.value(application_id)
             end
           end
         end
       end
 
-      def add_credit_card(xml, credit_card)
+      def add_credit_card(xml, credit_card, action)
         if credit_card.track_data
           add_swipe_data(xml, credit_card)
         else
@@ -468,7 +468,7 @@ module ActiveMerchant
               if credit_card.valid_card_verification_value?(credit_card.verification_value, credit_card.brand)
                 xml.cardCode(credit_card.verification_value)
               end
-              if credit_card.is_a?(NetworkTokenizationCreditCard)
+              if credit_card.is_a?(NetworkTokenizationCreditCard) && action != :credit
                 xml.cryptogram(credit_card.payment_cryptogram)
               end
             end
@@ -489,8 +489,10 @@ module ActiveMerchant
         end
       end
 
-      def add_token_payment_method(xml, token)
+      def add_token_payment_method(xml, token, options)
         customer_profile_id, customer_payment_profile_id, _ = split_authorization(token)
+        customer_profile_id = options[:customer_profile_id] if options[:customer_profile_id]
+        customer_payment_profile_id = options[:customer_payment_profile_id] if options[:customer_payment_profile_id]
         xml.customerProfileId(customer_profile_id)
         xml.customerPaymentProfileId(customer_payment_profile_id)
       end
@@ -552,8 +554,11 @@ module ActiveMerchant
         xml.customerIP(options[:ip]) unless empty?(options[:ip])
 
         xml.cardholderAuthentication do
-          xml.authenticationIndicator(options[:authentication_indicator])
-          xml.cardholderAuthenticationValue(options[:cardholder_authentication_value])
+          three_d_secure = options.fetch(:three_d_secure, {})
+          xml.authenticationIndicator(
+            options[:authentication_indicator] || three_d_secure[:eci])
+          xml.cardholderAuthenticationValue(
+            options[:cardholder_authentication_value] || three_d_secure[:cavv])
         end
       end
 
@@ -578,7 +583,7 @@ module ActiveMerchant
         end
       end
 
-      def add_shipping_address(xml, options, root_node="shipTo")
+      def add_shipping_address(xml, options, root_node='shipTo')
         address = options[:shipping_address] || options[:address]
         return unless address
 
@@ -610,7 +615,7 @@ module ActiveMerchant
         xml.order do
           xml.invoiceNumber(truncate(options[:order_id], 20))
           xml.description(truncate(options[:description], 255))
-          xml.purchaseOrderNumber(options[:po_number]) if options[:po_number] && transaction_type.start_with?("profileTrans")
+          xml.purchaseOrderNumber(options[:po_number]) if options[:po_number] && transaction_type.start_with?('profileTrans')
         end
 
         # Authorize.net API requires lineItems to be placed directly after order tag
@@ -692,9 +697,9 @@ module ActiveMerchant
             xml.email(options[:email]) unless empty?(options[:email])
 
             xml.paymentProfiles do
-              xml.customerType("individual")
+              xml.customerType('individual')
               add_billing_address(xml, credit_card, options)
-              add_shipping_address(xml, options, "shipToList")
+              add_shipping_address(xml, options, 'shipToList')
               xml.payment do
                 xml.creditCard do
                   xml.cardNumber(truncate(credit_card.number, 16))
@@ -723,7 +728,7 @@ module ActiveMerchant
       end
 
       def state_from(address, options)
-        if ["US", "CA"].include?(address[:country])
+        if ['US', 'CA'].include?(address[:country])
           address[:state] || 'NC'
         else
           address[:state] || 'n/a'
@@ -754,7 +759,7 @@ module ActiveMerchant
         avs_result = AVSResult.new(code: STANDARD_AVS_CODE_MAPPING[avs_result_code])
         cvv_result = CVVResult.new(response[:card_code])
         if using_live_gateway_in_test_mode?(response)
-          Response.new(false, "Using a live Authorize.net account in Test Mode is not permitted.")
+          Response.new(false, 'Using a live Authorize.net account in Test Mode is not permitted.')
         else
           Response.new(
             success_from(action, response),
@@ -771,7 +776,7 @@ module ActiveMerchant
       end
 
       def is_cim_action?(action)
-        action.to_s.start_with?("cim")
+        action.to_s.start_with?('cim')
       end
 
       def post_data(action)
@@ -785,17 +790,17 @@ module ActiveMerchant
 
       def root_for(action)
         if action == :cim_store
-          "createCustomerProfileRequest"
+          'createCustomerProfileRequest'
         elsif action == :cim_store_update
-          "createCustomerPaymentProfileRequest"
+          'createCustomerPaymentProfileRequest'
         elsif action == :cim_store_delete_customer
-          "deleteCustomerProfileRequest"
+          'deleteCustomerProfileRequest'
         elsif action == :verify_credentials
-          "authenticateTestRequest"
+          'authenticateTestRequest'
         elsif is_cim_action?(action)
-          "createCustomerProfileTransactionRequest"
+          'createCustomerProfileTransactionRequest'
         else
-          "createTransactionRequest"
+          'createTransactionRequest'
         end
       end
 
@@ -812,49 +817,53 @@ module ActiveMerchant
 
         response = {action: action}
 
-        response[:response_code] = if(element = doc.at_xpath("//transactionResponse/responseCode"))
+        response[:response_code] = if(element = doc.at_xpath('//transactionResponse/responseCode'))
           (empty?(element.content) ? nil : element.content.to_i)
         end
 
-        if(element = doc.at_xpath("//errors/error"))
-          response[:response_reason_code] = element.at_xpath("errorCode").content[/0*(\d+)$/, 1]
-          response[:response_reason_text] = element.at_xpath("errorText").content.chomp('.')
-        elsif(element = doc.at_xpath("//transactionResponse/messages/message"))
-          response[:response_reason_code] = element.at_xpath("code").content[/0*(\d+)$/, 1]
-          response[:response_reason_text] = element.at_xpath("description").content.chomp('.')
-        elsif(element = doc.at_xpath("//messages/message"))
-          response[:response_reason_code] = element.at_xpath("code").content[/0*(\d+)$/, 1]
-          response[:response_reason_text] = element.at_xpath("text").content.chomp('.')
+        if(element = doc.at_xpath('//errors/error'))
+          response[:response_reason_code] = element.at_xpath('errorCode').content[/0*(\d+)$/, 1]
+          response[:response_reason_text] = element.at_xpath('errorText').content.chomp('.')
+        elsif(element = doc.at_xpath('//transactionResponse/messages/message'))
+          response[:response_reason_code] = element.at_xpath('code').content[/0*(\d+)$/, 1]
+          response[:response_reason_text] = element.at_xpath('description').content.chomp('.')
+        elsif(element = doc.at_xpath('//messages/message'))
+          response[:response_reason_code] = element.at_xpath('code').content[/0*(\d+)$/, 1]
+          response[:response_reason_text] = element.at_xpath('text').content.chomp('.')
         else
           response[:response_reason_code] = nil
-          response[:response_reason_text] = ""
+          response[:response_reason_text] = ''
         end
 
-        response[:avs_result_code] = if(element = doc.at_xpath("//avsResultCode"))
+        response[:avs_result_code] = if(element = doc.at_xpath('//avsResultCode'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:transaction_id] = if(element = doc.at_xpath("//transId"))
+        response[:transaction_id] = if(element = doc.at_xpath('//transId'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:card_code] = if(element = doc.at_xpath("//cvvResultCode"))
+        response[:card_code] = if(element = doc.at_xpath('//cvvResultCode'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:authorization_code] = if(element = doc.at_xpath("//authCode"))
+        response[:authorization_code] = if(element = doc.at_xpath('//authCode'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:cardholder_authentication_code] = if(element = doc.at_xpath("//cavvResultCode"))
+        response[:cardholder_authentication_code] = if(element = doc.at_xpath('//cavvResultCode'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:account_number] = if(element = doc.at_xpath("//accountNumber"))
+        response[:account_number] = if(element = doc.at_xpath('//accountNumber'))
           (empty?(element.content) ? nil : element.content[-4..-1])
         end
 
-        response[:test_request] = if(element = doc.at_xpath("//testRequest"))
+        response[:test_request] = if(element = doc.at_xpath('//testRequest'))
+          (empty?(element.content) ? nil : element.content)
+        end
+
+        response[:full_response_code] = if(element = doc.at_xpath('//messages/message/code'))
           (empty?(element.content) ? nil : element.content)
         end
 
@@ -866,33 +875,33 @@ module ActiveMerchant
 
         doc = Nokogiri::XML(body).remove_namespaces!
 
-        if (element = doc.at_xpath("//messages/message"))
-          response[:message_code] = element.at_xpath("code").content[/0*(\d+)$/, 1]
-          response[:message_text] = element.at_xpath("text").content.chomp('.')
+        if (element = doc.at_xpath('//messages/message'))
+          response[:message_code] = element.at_xpath('code').content[/0*(\d+)$/, 1]
+          response[:message_text] = element.at_xpath('text').content.chomp('.')
         end
 
-        response[:result_code] = if(element = doc.at_xpath("//messages/resultCode"))
+        response[:result_code] = if(element = doc.at_xpath('//messages/resultCode'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:test_request] = if(element = doc.at_xpath("//testRequest"))
+        response[:test_request] = if(element = doc.at_xpath('//testRequest'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:customer_profile_id] = if(element = doc.at_xpath("//customerProfileId"))
+        response[:customer_profile_id] = if(element = doc.at_xpath('//customerProfileId'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:customer_payment_profile_id] = if(element = doc.at_xpath("//customerPaymentProfileIdList/numericString"))
+        response[:customer_payment_profile_id] = if(element = doc.at_xpath('//customerPaymentProfileIdList/numericString'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:customer_payment_profile_id] = if(element = doc.at_xpath("//customerPaymentProfileIdList/numericString") ||
-                                                              doc.at_xpath("//customerPaymentProfileId"))
+        response[:customer_payment_profile_id] = if(element = doc.at_xpath('//customerPaymentProfileIdList/numericString') ||
+                                                              doc.at_xpath('//customerPaymentProfileId'))
           (empty?(element.content) ? nil : element.content)
         end
 
-        response[:direct_response] = if(element = doc.at_xpath("//directResponse"))
+        response[:direct_response] = if(element = doc.at_xpath('//directResponse'))
           (empty?(element.content) ? nil : element.content)
         end
 
@@ -903,7 +912,7 @@ module ActiveMerchant
 
       def success_from(action, response)
         if cim?(action) || (action == :verify_credentials)
-          response[:result_code] == "Ok"
+          response[:result_code] == 'Ok'
         else
           [APPROVED, FRAUD_REVIEW].include?(response[:response_code]) && TRANSACTION_ALREADY_ACTIONED.exclude?(response[:response_reason_code])
         end
@@ -923,14 +932,14 @@ module ActiveMerchant
 
       def authorization_from(action, response)
         if cim?(action)
-          [response[:customer_profile_id], response[:customer_payment_profile_id], action].join("#")
+          [response[:customer_profile_id], response[:customer_payment_profile_id], action].join('#')
         else
-          [response[:transaction_id], response[:account_number], action].join("#")
+          [response[:transaction_id], response[:account_number], action].join('#')
         end
       end
 
       def split_authorization(authorization)
-        authorization.split("#")
+        authorization.split('#')
       end
 
       def cim?(action)
@@ -947,7 +956,7 @@ module ActiveMerchant
       end
 
       def using_live_gateway_in_test_mode?(response)
-        !test? && response[:test_request] == "1"
+        !test? && response[:test_request] == '1'
       end
 
       def map_error_code(response_code, response_reason_code)

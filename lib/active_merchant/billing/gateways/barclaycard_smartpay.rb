@@ -4,7 +4,7 @@ module ActiveMerchant #:nodoc:
       self.test_url = 'https://pal-test.barclaycardsmartpay.com/pal/servlet'
       self.live_url = 'https://pal-live.barclaycardsmartpay.com/pal/servlet'
 
-      self.supported_countries = ['AL', 'AD', 'AM', 'AT', 'AZ', 'BY', 'BE', 'BA', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'GE', 'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'KZ', 'LV', 'LI', 'LT', 'LU', 'MK', 'MT', 'MD', 'MC', 'ME', 'NL', 'NO', 'PL', 'PT', 'RO', 'RU', 'SM', 'RS', 'SK', 'SI', 'ES', 'SE', 'CH', 'TR', 'UA', 'GB', 'VA']
+      self.supported_countries = ['AL', 'AD', 'AM', 'AT', 'AZ', 'BY', 'BE', 'BA', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'KZ', 'LV', 'LI', 'LT', 'LU', 'MK', 'MT', 'MD', 'MC', 'ME', 'NL', 'NO', 'PL', 'PT', 'RO', 'RU', 'SM', 'RS', 'SK', 'SI', 'ES', 'SE', 'CH', 'TR', 'UA', 'GB', 'VA']
       self.default_currency = 'EUR'
       self.currencies_with_three_decimal_places = %w(BHD KWD OMR RSD TND)
       self.money_format = :cents
@@ -160,11 +160,11 @@ module ActiveMerchant #:nodoc:
         authorization = [parameters[:originalReference], response['pspReference']].compact
 
         return nil if authorization.empty?
-        return authorization.join("#")
+        return authorization.join('#')
       end
 
       def parse_avs_code(response)
-        AVS_MAPPING[response["avsResult"][0..1].strip] if response["avsResult"]
+        AVS_MAPPING[response['avsResult'][0..1].strip] if response['avsResult']
       end
 
       def flatten_hash(hash, prefix = nil)
@@ -249,13 +249,13 @@ module ActiveMerchant #:nodoc:
       def parse_street(address)
         address_to_parse = "#{address[:address1]} #{address[:address2]}"
         street = address[:street] || address_to_parse.split(/\s+/).keep_if { |x| x !~ /\d/ }.join(' ')
-        street.empty? ? "Not Provided" : street
+        street.empty? ? 'Not Provided' : street
       end
 
       def parse_house_number(address)
         address_to_parse = "#{address[:address1]} #{address[:address2]}"
         house = address[:houseNumberOrName] || address_to_parse.split(/\s+/).keep_if { |x| x =~ /\d/ }.join(' ')
-        house.empty? ? "Not Provided" : house
+        house.empty? ? 'Not Provided' : house
       end
 
       def create_address_hash(address, house, street)
@@ -295,7 +295,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def psp_reference_from(authorization)
-        authorization.nil? ? nil : authorization.split("#").first
+        authorization.nil? ? nil : authorization.split('#').first
       end
 
       def payment_request(money, options)
@@ -305,6 +305,7 @@ module ActiveMerchant #:nodoc:
         hash[:shopperEmail]     = options[:email] if options[:email]
         hash[:shopperIP]        = options[:ip] if options[:ip]
         hash[:shopperReference] = options[:customer] if options[:customer]
+        hash[:shopperInteraction] = options[:shopper_interaction] if options[:shopper_interaction]
         hash.keep_if { |_, v| v }
       end
 

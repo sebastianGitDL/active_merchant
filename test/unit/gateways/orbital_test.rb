@@ -12,11 +12,11 @@ class OrbitalGatewayTest < Test::Unit::TestCase
       :password => 'password',
       :merchant_id => 'merchant_id'
     )
-    @customer_ref_num = "ABC"
+    @customer_ref_num = 'ABC'
 
     @level_2 = {
-      tax_indicator: 1,
-      tax: 10,
+      tax_indicator: '1',
+      tax: '10',
       advice_addendum_1: 'taa1 - test',
       advice_addendum_2: 'taa2 - test',
       advice_addendum_3: 'taa3 - test',
@@ -46,8 +46,8 @@ class OrbitalGatewayTest < Test::Unit::TestCase
     stub_comms do
       @gateway.purchase(50, credit_card, @options.merge(level_2_data: @level_2))
     end.check_request do |endpoint, data, headers|
-      assert_match %{<TaxInd>#{@level_2[:tax_indicator]}</TaxInd>}, data
-      assert_match %{<Tax>#{@level_2[:tax]}</Tax>}, data
+      assert_match %{<TaxInd>#{@level_2[:tax_indicator].to_i}</TaxInd>}, data
+      assert_match %{<Tax>#{@level_2[:tax].to_i}</Tax>}, data
       assert_match %{<AMEXTranAdvAddn1>#{@level_2[:advice_addendum_1]}</AMEXTranAdvAddn1>}, data
       assert_match %{<AMEXTranAdvAddn2>#{@level_2[:advice_addendum_2]}</AMEXTranAdvAddn2>}, data
       assert_match %{<AMEXTranAdvAddn3>#{@level_2[:advice_addendum_3]}</AMEXTranAdvAddn3>}, data
@@ -99,13 +99,13 @@ class OrbitalGatewayTest < Test::Unit::TestCase
     assert response = @gateway.purchase(101, credit_card, :order_id => '1')
     assert_instance_of Response, response
     assert_failure response
-    assert_equal "AUTH DECLINED                   12001", response.message
+    assert_equal 'AUTH DECLINED                   12001', response.message
   end
 
   def test_successful_void
     @gateway.expects(:ssl_post).returns(successful_void_response)
 
-    assert response = @gateway.void("identifier")
+    assert response = @gateway.void('identifier')
     assert_instance_of Response, response
     assert_success response
     assert_nil response.message
@@ -114,8 +114,8 @@ class OrbitalGatewayTest < Test::Unit::TestCase
   def test_deprecated_void
     @gateway.expects(:ssl_post).returns(successful_void_response)
 
-    assert_deprecation_warning("Calling the void method with an amount parameter is deprecated and will be removed in a future version.") do
-      assert response = @gateway.void(50, "identifier")
+    assert_deprecation_warning('Calling the void method with an amount parameter is deprecated and will be removed in a future version.') do
+      assert response = @gateway.void(50, 'identifier')
       assert_instance_of Response, response
       assert_success response
       assert_nil response.message
@@ -137,7 +137,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
 
   def test_order_id_format
     response = stub_comms do
-      @gateway.purchase(101, credit_card, :order_id => " #101.23,56 $Hi &thére@Friends")
+      @gateway.purchase(101, credit_card, :order_id => ' #101.23,56 $Hi &thére@Friends')
     end.check_request do |endpoint, data, headers|
       assert_match(/<OrderID>101-23,56 \$Hi &amp;thre@Fr<\/OrderID>/, data)
     end.respond_with(successful_purchase_response)
@@ -146,7 +146,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
 
   def test_order_id_format_for_capture
     response = stub_comms do
-      @gateway.capture(101, "4A5398CF9B87744GG84A1D30F2F2321C66249416;1001.1", :order_id => "#1001.1")
+      @gateway.capture(101, '4A5398CF9B87744GG84A1D30F2F2321C66249416;1001.1', :order_id => '#1001.1')
     end.check_request do |endpoint, data, headers|
       assert_match(/<OrderID>1001-1<\/OrderID>/, data)
     end.respond_with(successful_purchase_response)
@@ -154,7 +154,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
   end
 
   def test_expiry_date
-    year = (DateTime.now + 1.year).strftime("%y")
+    year = (DateTime.now + 1.year).strftime('%y')
     assert_equal "09#{year}", @gateway.send(:expiry_date, credit_card)
   end
 
@@ -377,7 +377,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
     response = stub_comms do
       assert_deprecation_warning(Gateway::RECURRING_DEPRECATION_MESSAGE) do
         assert_deprecation_warning do
-          @gateway.add_customer_profile(credit_card, :managed_billing => {:start_date => "10-10-2014" })
+          @gateway.add_customer_profile(credit_card, :managed_billing => {:start_date => '10-10-2014' })
         end
       end
     end.check_request do |endpoint, data, headers|
@@ -393,8 +393,8 @@ class OrbitalGatewayTest < Test::Unit::TestCase
     response = stub_comms do
       assert_deprecation_warning(Gateway::RECURRING_DEPRECATION_MESSAGE) do
         assert_deprecation_warning do
-          @gateway.add_customer_profile(credit_card, :managed_billing => {:start_date => "10-10-2014",
-                  :end_date => "10-10-2015",
+          @gateway.add_customer_profile(credit_card, :managed_billing => {:start_date => '10-10-2014',
+                  :end_date => '10-10-2015',
                   :max_dollar_value => 1500,
                   :max_transactions => 12})
         end
@@ -553,7 +553,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
       schema_file = File.read("#{File.dirname(__FILE__)}/../../schema/orbital/Request_PTI54.xsd")
       doc = Nokogiri::XML(data)
       xsd = Nokogiri::XML::Schema(schema_file)
-      assert xsd.valid?(doc), "Request does not adhere to DTD"
+      assert xsd.valid?(doc), 'Request does not adhere to DTD'
     end.respond_with(successful_purchase_response)
     assert_success response
   end
@@ -565,7 +565,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
       schema_file = File.read("#{File.dirname(__FILE__)}/../../schema/orbital/Request_PTI54.xsd")
       doc = Nokogiri::XML(data)
       xsd = Nokogiri::XML::Schema(schema_file)
-      assert xsd.valid?(doc), "Request does not adhere to DTD"
+      assert xsd.valid?(doc), 'Request does not adhere to DTD'
     end.respond_with(successful_purchase_response)
     assert_success response
   end
@@ -633,7 +633,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
   end
 
   def test_attempts_seconday_url
-    @gateway.expects(:ssl_post).with(OrbitalGateway.test_url, anything, anything).raises(ActiveMerchant::ConnectionError.new("message", nil))
+    @gateway.expects(:ssl_post).with(OrbitalGateway.test_url, anything, anything).raises(ActiveMerchant::ConnectionError.new('message', nil))
     @gateway.expects(:ssl_post).with(OrbitalGateway.secondary_test_url, anything, anything).returns(successful_purchase_response)
 
     response = @gateway.purchase(50, credit_card, :order_id => '1')
@@ -703,7 +703,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
     end.respond_with(successful_purchase_response, successful_purchase_response)
     assert_success response
     assert_equal '4A5398CF9B87744GG84A1D30F2F2321C66249416;1', response.authorization
-    assert_equal "Approved", response.message
+    assert_equal 'Approved', response.message
   end
 
   def test_successful_verify_and_failed_void
@@ -712,7 +712,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
     end.respond_with(successful_purchase_response, failed_purchase_response)
     assert_success response
     assert_equal '4A5398CF9B87744GG84A1D30F2F2321C66249416;1', response.authorization
-    assert_equal "Approved", response.message
+    assert_equal 'Approved', response.message
   end
 
   def test_failed_verify
@@ -720,7 +720,7 @@ class OrbitalGatewayTest < Test::Unit::TestCase
       @gateway.verify(credit_card, @options)
     end.respond_with(failed_purchase_response, failed_purchase_response)
     assert_failure response
-    assert_equal "AUTH DECLINED                   12001", response.message
+    assert_equal 'AUTH DECLINED                   12001', response.message
   end
 
   def test_cvv_indicator_present_for_visas_with_cvvs
@@ -809,6 +809,18 @@ reading 1200 bytes...
 -> "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><NewOrderResp><IndustryType></IndustryType><MessageType>AC</MessageType><MerchantID>[FILTERED]</MerchantID><TerminalID>001</TerminalID><CardBrand>VI</CardBrand><AccountNum>[FILTERED]</AccountNum><OrderID>b141cf3ce2a442732e1906</OrderID><TxRefNum>574FDA8CECFBC3DA073FF74A7E6DE4E0BA87545B</TxRefNum><TxRefIdx>2</TxRefIdx><ProcStatus>0</ProcStatus><ApprovalStatus>1</ApprovalStatus><RespCode>00</RespCode><AVSRespCode>7 </AVSRespCode><CVV2RespCode>M</CVV2RespCode><AuthCode>tst595</AuthCode><RecurringAdviceCd></RecurringAdviceCd><CAVVRespCode></CAVVRespCode><StatusMsg>Approved</StatusMsg><RespMsg></RespMsg><HostRespCode>100</HostRespCode><HostAVSRespCode>IU</HostAVSRespCode><HostCVV2RespCode>M</HostCVV2RespCode><CustomerRefNum></CustomerRefNum><CustomerName></CustomerName><ProfileProcStatus></ProfileProcStatus><CustomerProfileMessage></CustomerProfileMessage><RespTime>030444</RespTime><PartialAuthOccurred></PartialAuthOccurred><RequestedAmount></RequestedAmount><RedeemedAmount></RedeemedAmount><RemainingBalance></RemainingBalance><CountryFraudFilterStatus></CountryFraudFilterStatus><IsoCountryCode></IsoCountryCode></NewOrderResp></Response>"
 read 1200 bytes
 Conn close
+    EOS
+  end
+
+  def pre_scrubbed_profile
+    <<-EOS
+<?xml version="1.0" encoding="UTF-8"?><Response><ProfileResp><CustomerBin>000001</CustomerBin><CustomerMerchantID>253997</CustomerMerchantID><CustomerName>LONGBOB LONGSEN</CustomerName><CustomerRefNum>109273631</CustomerRefNum><CustomerProfileAction>CREATE</CustomerProfileAction><ProfileProcStatus>0</ProfileProcStatus><CustomerProfileMessage>Profile Request Processed</CustomerProfileMessage><CustomerAddress1>456 MY STREET</CustomerAddress1><CustomerAddress2>APT 1</CustomerAddress2><CustomerCity>OTTAWA</CustomerCity><CustomerState>ON</CustomerState><CustomerZIP>K1C2N6</CustomerZIP><CustomerEmail></CustomerEmail><CustomerPhone>5555555555</CustomerPhone><CustomerCountryCode>CA</CustomerCountryCode><CustomerProfileOrderOverrideInd>NO</CustomerProfileOrderOverrideInd><OrderDefaultDescription></OrderDefaultDescription><OrderDefaultAmount></OrderDefaultAmount><CustomerAccountType>CC</CustomerAccountType><Status>A</Status><CCAccountNum>4112344112344113</CCAccountNum><CCExpireDate>0919</CCExpireDate><ECPAccountDDA></ECPAccountDDA><ECPAccountType></ECPAccountType><ECPAccountRT></ECPAccountRT><ECPBankPmtDlv></ECPBankPmtDlv><SwitchSoloStartDate></SwitchSoloStartDate><SwitchSoloIssueNum></SwitchSoloIssueNum><RespTime></RespTime></ProfileResp></Response>
+    EOS
+  end
+
+  def post_scrubbed_profile
+    <<-EOS
+<?xml version="1.0" encoding="UTF-8"?><Response><ProfileResp><CustomerBin>000001</CustomerBin><CustomerMerchantID>[FILTERED]</CustomerMerchantID><CustomerName>LONGBOB LONGSEN</CustomerName><CustomerRefNum>109273631</CustomerRefNum><CustomerProfileAction>CREATE</CustomerProfileAction><ProfileProcStatus>0</ProfileProcStatus><CustomerProfileMessage>Profile Request Processed</CustomerProfileMessage><CustomerAddress1>456 MY STREET</CustomerAddress1><CustomerAddress2>APT 1</CustomerAddress2><CustomerCity>OTTAWA</CustomerCity><CustomerState>ON</CustomerState><CustomerZIP>K1C2N6</CustomerZIP><CustomerEmail></CustomerEmail><CustomerPhone>5555555555</CustomerPhone><CustomerCountryCode>CA</CustomerCountryCode><CustomerProfileOrderOverrideInd>NO</CustomerProfileOrderOverrideInd><OrderDefaultDescription></OrderDefaultDescription><OrderDefaultAmount></OrderDefaultAmount><CustomerAccountType>CC</CustomerAccountType><Status>A</Status><CCAccountNum>[FILTERED]</CCAccountNum><CCExpireDate>0919</CCExpireDate><ECPAccountDDA></ECPAccountDDA><ECPAccountType></ECPAccountType><ECPAccountRT></ECPAccountRT><ECPBankPmtDlv></ECPBankPmtDlv><SwitchSoloStartDate></SwitchSoloStartDate><SwitchSoloIssueNum></SwitchSoloIssueNum><RespTime></RespTime></ProfileResp></Response>
     EOS
   end
 end

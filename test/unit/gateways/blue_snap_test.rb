@@ -1,6 +1,8 @@
 require 'test_helper'
 
 class BlueSnapTest < Test::Unit::TestCase
+  include CommStub
+
   def setup
     @gateway = BlueSnapGateway.new(api_username: 'login', api_password: 'password')
     @credit_card = credit_card
@@ -21,7 +23,7 @@ class BlueSnapTest < Test::Unit::TestCase
 
     response = @gateway.purchase(@amount, @credit_card, @options)
     assert_failure response
-    assert_equal "14002", response.error_code
+    assert_equal '14002', response.error_code
   end
 
   def test_successful_authorize
@@ -37,55 +39,55 @@ class BlueSnapTest < Test::Unit::TestCase
 
     response = @gateway.authorize(@amount, @credit_card, @options)
     assert_failure response
-    assert_equal "14002", response.error_code
+    assert_equal '14002', response.error_code
   end
 
   def test_successful_capture
     @gateway.expects(:raw_ssl_request).returns(successful_capture_response)
 
-    response = @gateway.capture(@amount, "Authorization")
+    response = @gateway.capture(@amount, 'Authorization')
     assert_success response
-    assert_equal "1012082881", response.authorization
+    assert_equal '1012082881', response.authorization
   end
 
   def test_failed_capture
     @gateway.expects(:raw_ssl_request).returns(failed_capture_response)
 
-    response = @gateway.capture(@amount, "Authorization")
+    response = @gateway.capture(@amount, 'Authorization')
     assert_failure response
-    assert_equal "20008", response.error_code
+    assert_equal '20008', response.error_code
   end
 
   def test_successful_refund
     @gateway.expects(:raw_ssl_request).returns(successful_refund_response)
 
-    response = @gateway.refund(@amount, "Authorization")
+    response = @gateway.refund(@amount, 'Authorization')
     assert_success response
-    assert_equal "1012082907", response.authorization
+    assert_equal '1012082907', response.authorization
   end
 
   def test_failed_refund
     @gateway.expects(:raw_ssl_request).returns(failed_refund_response)
 
-    response = @gateway.refund(@amount, "Authorization")
+    response = @gateway.refund(@amount, 'Authorization')
     assert_failure response
-    assert_equal "20008", response.error_code
+    assert_equal '20008', response.error_code
   end
 
   def test_successful_void
     @gateway.expects(:raw_ssl_request).returns(successful_void_response)
 
-    response = @gateway.void("Authorization")
+    response = @gateway.void('Authorization')
     assert_success response
-    assert_equal "1012082919", response.authorization
+    assert_equal '1012082919', response.authorization
   end
 
   def test_failed_void
     @gateway.expects(:raw_ssl_request).returns(failed_void_response)
 
-    response = @gateway.void("Authorization")
+    response = @gateway.void('Authorization')
     assert_failure response
-    assert_equal "20008", response.error_code
+    assert_equal '20008', response.error_code
   end
 
   def test_successful_verify
@@ -93,7 +95,7 @@ class BlueSnapTest < Test::Unit::TestCase
 
     response = @gateway.verify(@credit_card, @options)
     assert_success response
-    assert_equal "1012082929", response.authorization
+    assert_equal '1012082929', response.authorization
   end
 
   def test_failed_verify
@@ -101,7 +103,7 @@ class BlueSnapTest < Test::Unit::TestCase
 
     response = @gateway.verify(@credit_card, @options)
     assert_failure response
-    assert_equal "14002", response.error_code
+    assert_equal '14002', response.error_code
   end
 
   def test_successful_store
@@ -109,7 +111,7 @@ class BlueSnapTest < Test::Unit::TestCase
 
     response = @gateway.store(@credit_card, @options)
     assert_success response
-    assert_equal "20936441", response.authorization
+    assert_equal '20936441', response.authorization
   end
 
   def test_failed_store
@@ -117,7 +119,15 @@ class BlueSnapTest < Test::Unit::TestCase
 
     response = @gateway.store(@credit_card, @options)
     assert_failure response
-    assert_equal "14002", response.error_code
+    assert_equal '14002', response.error_code
+  end
+
+  def test_currency_added_correctly
+    stub_comms(@gateway, :raw_ssl_request) do
+      @gateway.purchase(@amount, @credit_card, @options.merge(currency: 'CAD'))
+    end.check_request do |method, url, data|
+      assert_match(/<currency>CAD<\/currency>/, data)
+    end.respond_with(successful_purchase_response)
   end
 
   def test_verify_good_credentials
@@ -488,7 +498,7 @@ class BlueSnapTest < Test::Unit::TestCase
       </vaulted-shopper>
     XML
 
-    response.headers = { "content-location" => "https://sandbox.bluesnap.com/services/2/vaulted-shoppers/20936441" }
+    response.headers = { 'content-location' => 'https://sandbox.bluesnap.com/services/2/vaulted-shoppers/20936441' }
     response
   end
 
@@ -507,7 +517,7 @@ class BlueSnapTest < Test::Unit::TestCase
   end
 
   def credentials_are_legit_response
-    MockResponse.new(400, "<xml>Server Error</xml>")
+    MockResponse.new(400, '<xml>Server Error</xml>')
   end
 
   def credentials_are_bogus_response

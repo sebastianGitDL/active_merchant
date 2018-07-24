@@ -153,6 +153,12 @@ class RemoteBarclaycardSmartpayTest < Test::Unit::TestCase
     assert_equal '[capture-received]', response.message
   end
 
+  def test_successful_purchase_with_shopper_interaction
+    response = @gateway.purchase(@amount, @credit_card, @options.merge(shopper_interaction: 'ContAuth'))
+    assert_success response
+    assert_equal '[capture-received]', response.message
+  end
+
   def test_successful_authorize_with_3ds
     assert response = @gateway.authorize(@amount, @three_ds_enrolled_card, @options.merge(execute_threed: true))
     assert_equal 'RedirectShopper', response.message
@@ -243,14 +249,14 @@ class RemoteBarclaycardSmartpayTest < Test::Unit::TestCase
     assert response = @gateway.verify(@credit_card, @options)
     assert_success response
 
-    assert_equal "Authorised", response.message
+    assert_equal 'Authorised', response.message
     assert response.authorization
   end
 
   def test_unsuccessful_verify
     assert response = @gateway.verify(@declined_card, @options)
     assert_failure response
-    assert_equal "Refused", response.message
+    assert_equal 'Refused', response.message
   end
 
   def test_invalid_login
@@ -266,13 +272,13 @@ class RemoteBarclaycardSmartpayTest < Test::Unit::TestCase
   def test_successful_store
     response = @gateway.store(@credit_card, @options)
     assert_success response
-    assert_equal "Success", response.message
+    assert_equal 'Success', response.message
   end
 
   def test_failed_store
     response = @gateway.store(credit_card('', :month => '', :year => '', :verification_value => ''), @options)
     assert_failure response
-    assert_equal "Unprocessable Entity", response.message
+    assert_equal 'Unprocessable Entity', response.message
   end
 
   # AVS must be enabled on the gateway's end for the test account used

@@ -52,25 +52,26 @@ module ActiveMerchant #:nodoc:
         add_invoice(post, money, options)
         add_payment(post, payment)
         add_customer_data(post, options)
+        action = payment.is_a?(String) ? 'debit' : 'debit_cc'
 
-        commit_transaction('debit_cc', post)
+        commit_transaction(action, post)
       end
 
       def authorize(money, payment, options = {})
         post = {}
 
         add_invoice(post, money, options)
+        add_payment(post, payment)
         add_customer_data(post, options)
 
-        MultiResponse.run do |r|
-          r.process { store(payment, options) }
-          post[:card] = { token: r.authorization }
-          r.process { commit_transaction('authorize', post) }
-        end
+        commit_transaction('authorize', post)
       end
 
-      def capture(_money, authorization, _options = {})
-        post = { transaction: { id: authorization } }
+      def capture(money, authorization, _options = {})
+        post = {
+            transaction: { id: authorization }
+        }
+        post[:order] = {amount: amount(money).to_f} if money
 
         commit_transaction('capture', post)
       end
@@ -144,16 +145,21 @@ module ActiveMerchant #:nodoc:
         post[:order][:installments] = options[:installments] if options[:installments]
         post[:order][:installments_type] = options[:installments_type] if options[:installments_type]
         post[:order][:taxable_amount] = options[:taxable_amount] if options[:taxable_amount]
+        post[:order][:tax_percentage] = options[:tax_percentage] if options[:tax_percentage]
       end
 
       def add_payment(post, payment)
         post[:card] ||= {}
-        post[:card][:number] = payment.number
-        post[:card][:holder_name] = payment.name
-        post[:card][:expiry_month] = payment.month
-        post[:card][:expiry_year] = payment.year
-        post[:card][:cvc] = payment.verification_value
-        post[:card][:type] = CARD_MAPPING[payment.brand]
+        if payment.is_a?(String)
+          post[:card][:token] = payment
+        else
+          post[:card][:number] = payment.number
+          post[:card][:holder_name] = payment.name
+          post[:card][:expiry_month] = payment.month
+          post[:card][:expiry_year] = payment.year
+          post[:card][:cvc] = payment.verification_value
+          post[:card][:type] = CARD_MAPPING[payment.brand]
+        end
       end
 
       def parse(body)
@@ -168,7 +174,12 @@ module ActiveMerchant #:nodoc:
         rescue ResponseError => e
           raw_response = e.response.body
         end
-        parse(raw_response)
+
+        begin
+          parse(raw_response)
+        rescue JSON::ParserError
+          {'status' => 'Internal server error'}
+        end
       end
 
       def commit_transaction(action, parameters)
@@ -213,10 +224,10 @@ module ActiveMerchant #:nodoc:
       end
 
       def message_from(response)
-        if success_from(response)
-          response['transaction'] && response['transaction']['message']
-        else
+        if !success_from(response) && response['error']
           response['error'] && response['error']['type']
+        else
+          response['transaction'] && response['transaction']['message']
         end
       end
 

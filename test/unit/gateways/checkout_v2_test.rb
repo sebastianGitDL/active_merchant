@@ -27,10 +27,10 @@ class CheckoutV2Test < Test::Unit::TestCase
       @gateway.purchase(@amount, @credit_card)
     end.respond_with(successful_purchase_response)
 
-    assert_equal 'S', response.avs_result["code"]
-    assert_equal 'U.S.-issuing bank does not support AVS.', response.avs_result["message"]
-    assert_equal 'X', response.avs_result["postal_match"]
-    assert_equal 'X', response.avs_result["street_match"]
+    assert_equal 'S', response.avs_result['code']
+    assert_equal 'U.S.-issuing bank does not support AVS.', response.avs_result['message']
+    assert_equal 'X', response.avs_result['postal_match']
+    assert_equal 'X', response.avs_result['street_match']
   end
 
   def test_successful_purchase_includes_cvv_result
@@ -38,7 +38,7 @@ class CheckoutV2Test < Test::Unit::TestCase
       @gateway.purchase(@amount, @credit_card)
     end.respond_with(successful_purchase_response)
 
-    assert_equal 'Y', response.cvv_result["code"]
+    assert_equal 'Y', response.cvv_result['code']
   end
 
   def test_successful_authorize_includes_avs_result
@@ -46,10 +46,10 @@ class CheckoutV2Test < Test::Unit::TestCase
       @gateway.authorize(@amount, @credit_card)
     end.respond_with(successful_authorize_response)
 
-    assert_equal 'S', response.avs_result["code"]
-    assert_equal 'U.S.-issuing bank does not support AVS.', response.avs_result["message"]
-    assert_equal 'X', response.avs_result["postal_match"]
-    assert_equal 'X', response.avs_result["street_match"]
+    assert_equal 'S', response.avs_result['code']
+    assert_equal 'U.S.-issuing bank does not support AVS.', response.avs_result['message']
+    assert_equal 'X', response.avs_result['postal_match']
+    assert_equal 'X', response.avs_result['street_match']
   end
 
   def test_successful_authorize_includes_cvv_result
@@ -57,12 +57,12 @@ class CheckoutV2Test < Test::Unit::TestCase
       @gateway.authorize(@amount, @credit_card)
     end.respond_with(successful_authorize_response)
 
-    assert_equal 'Y', response.cvv_result["code"]
+    assert_equal 'Y', response.cvv_result['code']
   end
 
   def test_purchase_with_additional_fields
     response = stub_comms do
-      @gateway.purchase(@amount, @credit_card, {descriptor_city: "london", descriptor_name: "sherlock"})
+      @gateway.purchase(@amount, @credit_card, {descriptor_city: 'london', descriptor_name: 'sherlock'})
     end.check_request do |endpoint, data, headers|
       assert_match(/"descriptor\":{\"name\":\"sherlock\",\"city\":\"london\"}/, data)
     end.respond_with(successful_purchase_response)
@@ -84,7 +84,31 @@ class CheckoutV2Test < Test::Unit::TestCase
     end.respond_with(successful_authorize_response)
 
     assert_success response
-    assert_equal "charge_test_AF1A29AD350Q748C7EA8", response.authorization
+    assert_equal 'charge_test_AF1A29AD350Q748C7EA8', response.authorization
+
+    capture = stub_comms do
+      @gateway.capture(@amount, response.authorization)
+    end.respond_with(successful_capture_response)
+
+    assert_success capture
+  end
+
+  def test_successful_authorize_and_capture_with_additional_options
+    response = stub_comms do
+      options = {
+        card_on_file: true,
+        transaction_indicator: 2,
+        previous_charge_id: 'charge_123'
+      }
+      @gateway.authorize(@amount, @credit_card, options)
+    end.check_request do |endpoint, data, headers|
+      assert_match(%r{"cardOnFile":true}, data)
+      assert_match(%r{"transactionIndicator":2}, data)
+      assert_match(%r{"previousChargeId":"charge_123"}, data)
+    end.respond_with(successful_authorize_response)
+
+    assert_success response
+    assert_equal 'charge_test_AF1A29AD350Q748C7EA8', response.authorization
 
     capture = stub_comms do
       @gateway.capture(@amount, response.authorization)
@@ -99,13 +123,13 @@ class CheckoutV2Test < Test::Unit::TestCase
     end.respond_with(failed_authorize_response)
 
     assert_failure response
-    assert_equal "Invalid Card Number", response.message
+    assert_equal 'Invalid Card Number', response.message
     assert response.test?
   end
 
   def test_failed_capture
     response = stub_comms do
-      @gateway.capture(100, "")
+      @gateway.capture(100, '')
     end.respond_with(failed_capture_response)
 
     assert_failure response
@@ -117,7 +141,7 @@ class CheckoutV2Test < Test::Unit::TestCase
     end.respond_with(successful_authorize_response)
 
     assert_success response
-    assert_equal "charge_test_AF1A29AD350Q748C7EA8", response.authorization
+    assert_equal 'charge_test_AF1A29AD350Q748C7EA8', response.authorization
 
     void = stub_comms do
       @gateway.void(response.authorization)
@@ -128,7 +152,7 @@ class CheckoutV2Test < Test::Unit::TestCase
 
   def test_failed_void
     response = stub_comms do
-      @gateway.void("5d53a33d960c46d00f5dc061947d998c")
+      @gateway.void('5d53a33d960c46d00f5dc061947d998c')
     end.respond_with(failed_void_response)
 
     assert_failure response
@@ -140,7 +164,7 @@ class CheckoutV2Test < Test::Unit::TestCase
     end.respond_with(successful_purchase_response)
 
     assert_success response
-    assert_equal "charge_test_941CA9CE174U76BD29C8", response.authorization
+    assert_equal 'charge_test_941CA9CE174U76BD29C8', response.authorization
 
     refund = stub_comms do
       @gateway.refund(@amount, response.authorization)
@@ -151,7 +175,7 @@ class CheckoutV2Test < Test::Unit::TestCase
 
   def test_failed_refund
     response = stub_comms do
-      @gateway.refund(nil, "")
+      @gateway.refund(nil, '')
     end.respond_with(failed_refund_response)
 
     assert_failure response
@@ -162,7 +186,7 @@ class CheckoutV2Test < Test::Unit::TestCase
       @gateway.verify(@credit_card)
     end.respond_with(successful_authorize_response, failed_void_response)
     assert_success response
-    assert_equal "Succeeded", response.message
+    assert_equal 'Succeeded', response.message
   end
 
   def test_failed_verify
@@ -170,7 +194,7 @@ class CheckoutV2Test < Test::Unit::TestCase
       @gateway.verify(@credit_card)
     end.respond_with(failed_authorize_response, successful_void_response)
     assert_failure response
-    assert_equal "Invalid Card Number", response.message
+    assert_equal 'Invalid Card Number', response.message
   end
 
   def test_transcript_scrubbing
@@ -184,6 +208,15 @@ class CheckoutV2Test < Test::Unit::TestCase
 
     assert_failure response
     assert_match %r{Invalid JSON response}, response.message
+  end
+
+  def test_error_code_returned
+    response = stub_comms do
+      @gateway.purchase(@amount, @credit_card)
+    end.respond_with(error_code_response)
+
+    assert_failure response
+    assert_match(/70000: 70077/, response.error_code)
   end
 
   def test_supported_countries
@@ -440,5 +473,11 @@ class CheckoutV2Test < Test::Unit::TestCase
     )
   end
 
-
+  def error_code_response
+    %(
+      {
+        "eventId":"1b206f69-b4db-4259-9713-b72dfe0f19da","errorCode":"70000","message":"Validation error","errorMessageCodes":["70077"],"errors":["Expired Card"]
+      }
+    )
+  end
 end

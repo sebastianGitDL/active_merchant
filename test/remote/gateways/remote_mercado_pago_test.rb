@@ -10,12 +10,19 @@ class RemoteMercadoPagoTest < Test::Unit::TestCase
     @options = {
       billing_address: address,
       shipping_address: address,
-      email: "user+br@example.com",
+      email: 'user+br@example.com',
       description: 'Store Purchase'
     }
   end
 
   def test_successful_purchase
+    response = @gateway.purchase(@amount, @credit_card, @options)
+    assert_success response
+    assert_equal 'accredited', response.message
+  end
+
+  def test_successful_purchase_with_binary_false
+    @options.update(binary_mode: false)
     response = @gateway.purchase(@amount, @credit_card, @options)
     assert_success response
     assert_equal 'accredited', response.message
@@ -32,7 +39,7 @@ class RemoteMercadoPagoTest < Test::Unit::TestCase
   def test_failed_purchase
     response = @gateway.purchase(@amount, @declined_card, @options)
     assert_failure response
-    assert_equal "rejected", response.error_code
+    assert_equal 'rejected', response.error_code
     assert_equal 'cc_rejected_other_reason', response.message
   end
 

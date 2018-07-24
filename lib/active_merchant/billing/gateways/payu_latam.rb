@@ -3,29 +3,29 @@ require 'digest/md5'
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     class PayuLatamGateway < Gateway
-      self.display_name = "PayU Latam"
-      self.homepage_url = "http://www.payulatam.com"
+      self.display_name = 'PayU Latam'
+      self.homepage_url = 'http://www.payulatam.com'
 
-      self.test_url = "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
-      self.live_url = "https://api.payulatam.com/payments-api/4.0/service.cgi"
+      self.test_url = 'https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi'
+      self.live_url = 'https://api.payulatam.com/payments-api/4.0/service.cgi'
 
-      self.supported_countries = ["AR", "BR", "CL", "CO", "MX", "PA", "PE"]
-      self.default_currency = "USD"
+      self.supported_countries = ['AR', 'BR', 'CL', 'CO', 'MX', 'PA', 'PE']
+      self.default_currency = 'USD'
       self.money_format = :dollars
       self.supported_cardtypes = [:visa, :master, :american_express, :diners_club]
 
       BRAND_MAP = {
-        "visa" => "VISA",
-        "master" => "MASTERCARD",
-        "american_express" => "AMEX",
-        "diners_club" => "DINERS"
+        'visa' => 'VISA',
+        'master' => 'MASTERCARD',
+        'american_express' => 'AMEX',
+        'diners_club' => 'DINERS'
       }
 
       MINIMUMS = {
-        "ARS" => 1700,
-        "BRL" => 600,
-        "MXN" => 3900,
-        "PEN" => 500
+        'ARS' => 1700,
+        'BRL' => 600,
+        'MXN' => 3900,
+        'PEN' => 500
       }
 
       def initialize(options={})
@@ -48,7 +48,7 @@ module ActiveMerchant #:nodoc:
       def capture(amount, authorization, options={})
         post = {}
 
-        add_credentials(post, 'SUBMIT_TRANSACTION')
+        add_credentials(post, 'SUBMIT_TRANSACTION', options)
         add_transaction_elements(post, 'CAPTURE', options)
         add_reference(post, authorization)
 
@@ -58,7 +58,7 @@ module ActiveMerchant #:nodoc:
       def void(authorization, options={})
         post = {}
 
-        add_credentials(post, 'SUBMIT_TRANSACTION')
+        add_credentials(post, 'SUBMIT_TRANSACTION', options)
         add_transaction_elements(post, 'VOID', options)
         add_reference(post, authorization)
 
@@ -68,7 +68,7 @@ module ActiveMerchant #:nodoc:
       def refund(amount, authorization, options={})
         post = {}
 
-        add_credentials(post, 'SUBMIT_TRANSACTION')
+        add_credentials(post, 'SUBMIT_TRANSACTION', options)
         add_transaction_elements(post, 'REFUND', options)
         add_reference(post, authorization)
 
@@ -115,7 +115,7 @@ module ActiveMerchant #:nodoc:
       private
 
       def auth_or_sale(post, transaction_type, amount, payment_method, options)
-        add_credentials(post, 'SUBMIT_TRANSACTION')
+        add_credentials(post, 'SUBMIT_TRANSACTION', options)
         add_transaction_elements(post, transaction_type, options)
         add_order(post, options)
         add_buyer(post, payment_method, options)
@@ -126,9 +126,9 @@ module ActiveMerchant #:nodoc:
         add_extra_parameters(post, options)
       end
 
-      def add_credentials(post, command)
+      def add_credentials(post, command, options={})
         post[:test] = test? unless command == 'CREATE_TOKEN'
-        post[:language] = 'en'
+        post[:language] = options[:language] || 'en'
         post[:command] = command
         merchant = {}
         merchant[:apiLogin] = @options[:api_login]
@@ -153,7 +153,7 @@ module ActiveMerchant #:nodoc:
         order[:partnerId] = options[:partner_id] if options[:partner_id]
         order[:referenceCode] = options[:order_id] || generate_unique_id
         order[:description] = options[:description] || 'Compra en ' + @options[:merchant_id]
-        order[:language] = 'en'
+        order[:language] = options[:language] || 'en'
         order[:shippingAddress] = shipping_address_fields(options) if options[:shipping_address]
         post[:transaction][:order] = order
       end
@@ -251,7 +251,7 @@ module ActiveMerchant #:nodoc:
           post[:transaction][:order][:referenceCode],
           post[:transaction][:order][:additionalValues][:TX_VALUE][:value],
           post[:transaction][:order][:additionalValues][:TX_VALUE][:currency]
-        ].compact.join("~")
+        ].compact.join('~')
 
         Digest::MD5.hexdigest(signature_string)
       end
@@ -333,8 +333,8 @@ module ActiveMerchant #:nodoc:
 
       def headers
         {
-          "Content-Type"  => "application/json",
-          "Accept"  => "application/json"
+          'Content-Type'  => 'application/json',
+          'Accept'  => 'application/json'
         }
       end
 
@@ -354,32 +354,32 @@ module ActiveMerchant #:nodoc:
       def success_from(action, response)
         case action
         when 'store'
-          response["code"] == "SUCCESS" && response["creditCardToken"] && response["creditCardToken"]["creditCardTokenId"].present?
+          response['code'] == 'SUCCESS' && response['creditCardToken'] && response['creditCardToken']['creditCardTokenId'].present?
         when 'verify_credentials'
-          response["code"] == "SUCCESS"
+          response['code'] == 'SUCCESS'
         when 'refund', 'void'
-        response["code"] == "SUCCESS" && response["transactionResponse"] && (response["transactionResponse"]["state"] == "PENDING" || response["transactionResponse"]["state"] == "APPROVED")
+        response['code'] == 'SUCCESS' && response['transactionResponse'] && (response['transactionResponse']['state'] == 'PENDING' || response['transactionResponse']['state'] == 'APPROVED')
         else
-          response["code"] == "SUCCESS" && response["transactionResponse"] && (response["transactionResponse"]["state"] == "APPROVED")
+          response['code'] == 'SUCCESS' && response['transactionResponse'] && (response['transactionResponse']['state'] == 'APPROVED')
         end
       end
 
       def message_from(action, success, response)
         case action
         when 'store'
-          return response["code"] if success
-          error_description = response["creditCardToken"]["errorDescription"] if response["creditCardToken"]
-          response["error"] || error_description || "FAILED"
+          return response['code'] if success
+          error_description = response['creditCardToken']['errorDescription'] if response['creditCardToken']
+          response['error'] || error_description || 'FAILED'
         when 'verify_credentials'
-          return "VERIFIED" if success
-          "FAILED"
+          return 'VERIFIED' if success
+          'FAILED'
         else
-          if response["transactionResponse"]
-            response_message = response["transactionResponse"]["responseMessage"]
-            response_code = response["transactionResponse"]["responseCode"] || response["transactionResponse"]["pendingReason"]
+          if response['transactionResponse']
+            response_message = response['transactionResponse']['responseMessage']
+            response_code = response['transactionResponse']['responseCode'] || response['transactionResponse']['pendingReason']
           end
           return response_code if success
-          response["error"] || response_message || response_code || "FAILED"
+          response['error'] || response_message || response_code || 'FAILED'
         end
       end
 
@@ -387,31 +387,31 @@ module ActiveMerchant #:nodoc:
         case action
         when 'store'
           [
-            response["creditCardToken"]["paymentMethod"],
-            response["creditCardToken"]["creditCardTokenId"]
-          ].compact.join("|")
+            response['creditCardToken']['paymentMethod'],
+            response['creditCardToken']['creditCardTokenId']
+          ].compact.join('|')
         when 'verify_credentials'
           nil
         else
           [
-            response["transactionResponse"]["orderId"],
-            response["transactionResponse"]["transactionId"]
-          ].compact.join("|")
+            response['transactionResponse']['orderId'],
+            response['transactionResponse']['transactionId']
+          ].compact.join('|')
         end
       end
 
       def split_authorization(authorization)
-        authorization.split("|")
+        authorization.split('|')
       end
 
       def error_from(action, response)
         case action
         when 'store'
-          response["creditCardToken"]["errorDescription"] if response["creditCardToken"]
+          response['creditCardToken']['errorDescription'] if response['creditCardToken']
         when 'verify_credentials'
-          response["error"] || "FAILED"
+          response['error'] || 'FAILED'
         else
-          response["transactionResponse"]["errorCode"] || response["transactionResponse"]["responseCode"] if response["transactionResponse"]
+          response['transactionResponse']['errorCode'] || response['transactionResponse']['responseCode'] if response['transactionResponse']
         end
       end
 
@@ -431,7 +431,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def unparsable_response(raw_response)
-        message = "Invalid JSON response received from PayuLatamGateway. Please contact PayuLatamGateway if you continue to receive this message."
+        message = 'Invalid JSON response received from PayuLatamGateway. Please contact PayuLatamGateway if you continue to receive this message.'
         message += " (The raw response returned by the API was #{raw_response.inspect})"
         return Response.new(false, message)
       end
